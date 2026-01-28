@@ -1,7 +1,6 @@
 from sqlite3 import connect
 import pandas as pd
 from fastapi import HTTPException
-from watermark import watermark
 import json
 
 

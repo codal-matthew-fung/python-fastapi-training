@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional
 from sqlite3 import connect
@@ -6,10 +7,21 @@ import pandas as pd
 from math import ceil
 from build_query import build_book_query, BookQueryParams
 from stats import get_analytics_summary
-import json
 
+# FastAPI Configuration
 
+## Create App Instance
 app = FastAPI()
+
+## Add CORS for Frontend React App
+origins = ["http://localhost:3000"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allows_methods=["GET", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 
 class Book(BaseModel):
