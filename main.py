@@ -1,12 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 from typing import Optional
 from sqlite3 import connect
 import pandas as pd
 from math import ceil
 from build_query import build_book_query, BookQueryParams
 from stats import get_analytics_summary
+from models import Book, BookListResponse, BookStatsSummary
+
+# Route Logic
+from list_books import list_books
 
 # FastAPI Configuration
 
@@ -19,62 +22,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allows_methods=["GET", "OPTIONS"],
+    allow_methods=["GET", "OPTIONS"],
     allow_headers=["*"],
 )
-
-
-class Book(BaseModel):
-    bookID: Optional[int] = Field(default=None, primary_key=True)
-    title: str
-    authors: str
-    average_rating: float
-    isbn: str
-    isbn13: int
-    language_code: str
-    num_pages: int
-    ratings_count: int
-    text_reviews_count: int
-    publication_date: str  # Kept as str initially for easier CSV ingestion
-    publisher: str
-
-
-class BookMetadata(BaseModel):
-    total_count: int
-    total_pages: int
-    current_page: int
-    page_count: Optional[int] = None
-
-
-class BookListResponse(BaseModel):
-    metadata: BookMetadata
-    books: list[Book]
-
-
-"""
-top_publishers": [],
-        "average_page_count": 0,
-        "average_rating": 0.0,
-        "review_ratios": [],
-"""
-
-
-class TopPublisher(BaseModel):
-    book_count: int
-    publisher: str
-
-
-class ReviewRatio(BaseModel):
-    publisher: str
-    total_books: int
-    avg_review_ratio: float
-
-
-class BookStatsSummary(BaseModel):
-    top_publishers: list[TopPublisher]
-    average_page_count: float
-    average_rating: float
-    review_ratios: list[ReviewRatio]
 
 
 @app.get("/")
@@ -83,73 +33,22 @@ def root():
 
 
 @app.get("/books", response_model=BookListResponse)
-def list_items(
+def main(
     limit_param: int = 20,
-    isbn: Optional[str] = None,
     sort_by: Optional[str] = None,
     sort_by_field: Optional[str] = None,
     page: Optional[int] = 1,
+    custom_condition: Optional[str] = None,
 ):
-    conn = connect("books.db")
-    # If the connection fails, raise an HTTPException
-    if not conn:
-        raise HTTPException(status_code=500, detail="Database connection failed")
+    data = list_books(
+        limit_param=limit_param,
+        sort_by=sort_by,
+        sort_by_field=sort_by_field,
+        page=page,
+        custom_condition=custom_condition,
+    )
 
-    if limit_param > 100:
-        raise HTTPException(
-            status_code=400,
-            detail="Limit parameter cannot exceed 100.",
-        )
-    # Build the SQL query dynamically based on parameters
-    query = "SELECT * FROM books"
-    condition = ""
-    sort = ""
-    limit = f"LIMIT {limit_param}"
-    offset = f"OFFSET {(page - 1) * limit_param}"
-    if isbn:
-        condition += f" isbn='{isbn}'"
-    if sort_by and sort_by_field:
-        sort = f"ORDER BY {sort_by_field} {sort_by}"
-    if condition:
-        condition = "WHERE" + condition
-    query += f" {condition} {sort} {limit} {offset};"
-    try:
-        df = pd.read_sql_query(query, conn)
-        if df.empty:
-            raise HTTPException(
-                status_code=404,
-                detail="No books found with the given criteria.",
-            )
-
-        total = pd.read_sql_query(
-            f"SELECT COUNT(*) as total FROM books {condition}", conn
-        )
-        tot = total["total"][0]
-        if tot > 0:
-            print(tot)
-            metadata = {
-                "metadata": {
-                    "total_count": int(tot),
-                    # Given integer division, need to get float and then ceil to get total pages
-                    # e.g., 45/20 = 2.25 -> ceil(2.25) = 3 pages
-                    "total_pages": ceil(tot / limit_param),
-                    "current_page": page,
-                }
-            }
-            print(metadata)
-
-        data = df.to_dict(orient="records")
-        reponse_data = {
-            "metadata": metadata["metadata"],
-            "books": data,
-        }
-
-        conn.close()
-    # Handle exceptions from database operations
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    return reponse_data
+    return data
 
 
 @app.get("/book/{isbn}", response_model=Book)
@@ -207,6 +106,7 @@ def search_books(
         data = df.to_dict(orient="records")
 
         tot = total["total"][0]
+        metadata = {"total_count": 0, "total_pages": 0, "current_page": page}
         if tot > 0:
             metadata = {
                 "metadata": {
