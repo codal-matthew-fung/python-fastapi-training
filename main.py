@@ -5,6 +5,9 @@ from sqlite3 import connect
 import pandas as pd
 from math import ceil
 from build_query import build_book_query, BookQueryParams
+from stats import get_analytics_summary
+import json
+
 
 app = FastAPI()
 
@@ -34,6 +37,32 @@ class BookMetadata(BaseModel):
 class BookListResponse(BaseModel):
     metadata: BookMetadata
     books: list[Book]
+
+
+"""
+top_publishers": [],
+        "average_page_count": 0,
+        "average_rating": 0.0,
+        "review_ratios": [],
+"""
+
+
+class TopPublisher(BaseModel):
+    book_count: int
+    publisher: str
+
+
+class ReviewRatio(BaseModel):
+    publisher: str
+    total_books: int
+    avg_review_ratio: float
+
+
+class BookStatsSummary(BaseModel):
+    top_publishers: list[TopPublisher]
+    average_page_count: float
+    average_rating: float
+    review_ratios: list[ReviewRatio]
 
 
 @app.get("/")
@@ -188,3 +217,10 @@ def search_books(
         raise HTTPException(status_code=500, detail=str(e))
 
     return response_data
+
+
+@app.get("/stats/summary", response_model=BookStatsSummary)
+def get_stats_summary():
+    data = get_analytics_summary()
+
+    return data
