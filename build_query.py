@@ -41,27 +41,21 @@ def build_book_query(book_params: BookQueryParams, with_count: bool = False):
     params = BookQueryParams()
     if book_params.page > 1:
         params.page = book_params.page
-    if not book_params.custom_condition:
-        if book_params.author:
-            conditions.append("authors LIKE :author")
-            params.author = book_params.author
+    if book_params.author:
+        conditions.append("authors LIKE :author")
+        params.author = book_params.author
 
-        if book_params.title:
-            conditions.append("title LIKE :title")
-            params.title = book_params.title
+    if book_params.title:
+        conditions.append("title LIKE :title")
+        params.title = book_params.title
 
-        if book_params.min_pages is not None:
-            conditions.append("num_pages >= :min_pages")
-            params.min_pages = book_params.min_pages
+    if book_params.min_pages is not None:
+        conditions.append("num_pages >= :min_pages")
+        params.min_pages = book_params.min_pages
 
-        if book_params.max_pages is not None:
-            conditions.append("num_pages <= :max_pages")
-            params.max_pages = book_params.max_pages
-    else:
-        conditions.append(":custom_condition")
-        # TODO: Fix the parsing of custom conditions
-        print(f"Custom Condition: {book_params.custom_condition}")
-        params.custom_condition = book_params.custom_condition
+    if book_params.max_pages is not None:
+        conditions.append("num_pages <= :max_pages")
+        params.max_pages = book_params.max_pages
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
@@ -69,7 +63,13 @@ def build_book_query(book_params: BookQueryParams, with_count: bool = False):
     if book_params.page > 0:
         offset = (book_params.page - 1) * book_params.limit
         params.offset = offset
+
+    if book_params.sort_by is not None and book_params.sort_by_field:
+        query += f" ORDER BY {book_params.sort_by_field} {book_params.sort_by}"
+        params.sort_by_field = book_params.sort_by_field
+        params.sort_by = book_params.sort_by
+
     if not with_count:
-        query += " LIMIT :limit OFFSET :offset;"
+        query += " LIMIT :limit OFFSET :offset"
 
     return query, params.model_dump()

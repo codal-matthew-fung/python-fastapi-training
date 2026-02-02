@@ -32,6 +32,7 @@ def list_books(
     )
     # Build the SQL query dynamically based on parameters
     query, params = build_book_query(book_params=params_model)
+    print("QUERYING BY:", query)
     books_df = pd.read_sql_query(query, conn, params=params)
     try:
         data = books_df.to_dict(orient="records")
