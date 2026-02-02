@@ -30,12 +30,17 @@ class BookQueryParams(BaseModel):
     custom_condition: Optional[str] = None
 
 
+fieldsToUse = "title,authors,average_rating,isbn,isbn13,language_code,num_pages,ratings_count,text_reviews_count,publication_date,publisher"
+
+
 def build_book_query(book_params: BookQueryParams, with_count: bool = False):
-    query = "SELECT * FROM books"
+    query = f"SELECT {fieldsToUse} FROM books"
     if with_count:
         query = "SELECT COUNT(*) as total FROM books"
     conditions = []
     params = BookQueryParams()
+    if book_params.page > 1:
+        params.page = book_params.page
     if not book_params.custom_condition:
         if book_params.author:
             conditions.append("authors LIKE :author")
@@ -61,11 +66,10 @@ def build_book_query(book_params: BookQueryParams, with_count: bool = False):
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
 
-    if params.offset > 0:
+    if book_params.page > 0:
         offset = (book_params.page - 1) * book_params.limit
         params.offset = offset
     if not with_count:
         query += " LIMIT :limit OFFSET :offset;"
 
-    print(query)
     return query, params.model_dump()

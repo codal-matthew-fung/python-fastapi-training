@@ -24,7 +24,11 @@ def list_books(
             detail="Limit parameter cannot exceed 100.",
         )
     params_model = BookQueryParams(
-        sort_by=sort_by, sort_by_field=sort_by_field, custom_condition=custom_condition
+        sort_by=sort_by,
+        sort_by_field=sort_by_field,
+        custom_condition=custom_condition,
+        page=page,
+        limit=limit_param,
     )
     # Build the SQL query dynamically based on parameters
     query, params = build_book_query(book_params=params_model)
@@ -57,7 +61,6 @@ def list_books(
 
         total = df["total"][0]
         if total > 0:
-            print(total)
             metadata = {
                 "metadata": {
                     "total_count": int(total),
@@ -75,8 +78,6 @@ def list_books(
         }
 
         conn.close()
-
-        print(metadata, data)
 
         return response_data
     # Handle exceptions from database operations

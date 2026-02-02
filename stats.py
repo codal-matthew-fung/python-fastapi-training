@@ -24,7 +24,6 @@ def get_analytics(conn):
     try:
         df = pd.read_sql_query(query, conn)
         top_publishers = df.to_dict(orient="records")
-        print(f"Top Publishers: {top_publishers}")
         stats["top_publishers"] = top_publishers
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -39,7 +38,6 @@ def get_analytics(conn):
     try:
         df = pd.read_sql_query(query, conn)
         averages = df.to_dict(orient="records")[0]
-        print(f"Averages: {averages}")
         stats["average_page_count"] = averages["avg_page_count"]
         stats["average_rating"] = averages["avg_rating"]
     except Exception as e:
@@ -65,8 +63,6 @@ def get_analytics(conn):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    print(stats)
-
     return stats
 
 
@@ -88,7 +84,6 @@ def get_analytics_summary():
     row = cursor.fetchone()
 
     if not row:
-        print(f"CALCULATING THE STATS, Row is: {row}")
         # Calculate if the cache is empty
         stats = get_analytics(conn=conn)
         stats_json = json.dumps(stats)
@@ -104,7 +99,6 @@ def get_analytics_summary():
 
         return stats
     else:
-        print("Retrieved the stats from the analytics_cache table.")
         data = json.loads(row[0])
 
         return data

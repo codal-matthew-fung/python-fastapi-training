@@ -3,7 +3,6 @@ from typing import Optional
 
 
 class Book(BaseModel):
-    bookID: Optional[int] = Field(default=None, primary_key=True)
     title: str
     authors: str
     average_rating: float

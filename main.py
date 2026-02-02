@@ -1,12 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
-from sqlite3 import connect
-import pandas as pd
-from math import ceil
-from build_query import build_book_query, BookQueryParams
-from stats import get_analytics_summary
 from models import Book, BookListResponse, BookStatsSummary
+from stats import get_analytics_summary
+from get_books_by_search import get_books_by_search
+from get_book import get_book
 
 # Route Logic
 from list_books import list_books
@@ -52,23 +50,9 @@ def main(
 
 
 @app.get("/book/{isbn}", response_model=Book)
-def get_book(isbn: str):
-    conn = connect("books.db")
-    isbn = str(isbn)
-    query = f'SELECT * FROM books WHERE isbn="{isbn}";'
-    try:
-        df = pd.read_sql_query(query, conn)
-        if df.empty:
-            raise HTTPException(
-                status_code=404,
-                detail="Book not found.",
-            )
-        item = df.to_dict(orient="records")[0]
-        conn.close()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    return item
+def get_book_data(isbn: str):
+    data = get_book()
+    return data
 
 
 @app.get("/books/search", response_model=BookListResponse)
@@ -79,56 +63,11 @@ def search_books(
     max_pages: Optional[int] = None,
     page: Optional[int] = 1,
 ):
-    conn = connect("books.db")
-    params_model = BookQueryParams(
-        author=f"%{author}%" if author else None,
-        title=f"%{title}%" if title else None,
-        min_pages=min_pages,
-        max_pages=max_pages,
-        page=page,
+    data = get_books_by_search(
+        author=author, title=title, min_pages=min_pages, max_pages=max_pages, page=page
     )
-    print(params_model.model_dump())
-    query, params = build_book_query(params_model)
 
-    print(f"Query: {query}")
-    print(f"Params: {params}")
-
-    try:
-        df = pd.read_sql_query(query, conn, params=params)
-        if df.empty:
-            return {
-                "metadata": {"total_count": 0, "total_pages": 0, "current_page": page},
-                "books": [],
-            }
-        count_query, count_params = build_book_query(params_model, with_count=True)
-        total = pd.read_sql_query(count_query, conn, params=count_params)
-
-        data = df.to_dict(orient="records")
-
-        tot = total["total"][0]
-        metadata = {"total_count": 0, "total_pages": 0, "current_page": page}
-        if tot > 0:
-            metadata = {
-                "metadata": {
-                    "total_count": int(tot),
-                    "page_count": int(len(data)),
-                    # Given integer division, need to get float and then ceil to get total pages
-                    # e.g., 45/20 = 2.25 -> ceil(2.25) = 3 pages
-                    "total_pages": ceil(tot / 20),
-                    "current_page": page,
-                }
-            }
-            print(metadata)
-
-        response_data = {
-            "metadata": metadata["metadata"],
-            "books": data,
-        }
-        conn.close()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    return response_data
+    return data
 
 
 @app.get("/stats/summary", response_model=BookStatsSummary)
