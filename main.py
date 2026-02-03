@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
+from typing import Literal, Optional
 from models import Book, BookListResponse, BookStatsSummary
 from stats import get_analytics_summary
 from get_books_by_search import get_books_by_search
@@ -33,7 +33,7 @@ def root():
 @app.get("/books", response_model=BookListResponse)
 def main(
     limit_param: int = 20,
-    sort_by: Optional[str] = None,
+    sort_by: Optional[Literal["ASC", "DESC"]] = None,
     sort_by_field: Optional[str] = None,
     page: Optional[int] = 1,
     custom_condition: Optional[str] = None,
@@ -51,7 +51,7 @@ def main(
 
 @app.get("/book/{isbn}", response_model=Book)
 def get_book_data(isbn: str):
-    data = get_book()
+    data = get_book(isbn)
     return data
 
 
@@ -62,9 +62,17 @@ def search_books(
     min_pages: Optional[int] = None,
     max_pages: Optional[int] = None,
     page: Optional[int] = 1,
+    sort_by: Optional[Literal["ASC", "DESC"]] = None,
+    sort_by_field: Optional[str] = None,
 ):
     data = get_books_by_search(
-        author=author, title=title, min_pages=min_pages, max_pages=max_pages, page=page
+        author=author,
+        title=title,
+        min_pages=min_pages,
+        max_pages=max_pages,
+        page=page,
+        sort_by=sort_by,
+        sort_by_field=sort_by_field,
     )
 
     return data

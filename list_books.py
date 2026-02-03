@@ -70,6 +70,8 @@ def list_books(
                     "total_pages": ceil(total / limit_param),
                     "current_page": page,
                     "page_count": len(data),
+                    "has_prev_page": page > 1 and ceil(total / 20) > 1,
+                    "has_next_page": ceil(total / 20) > page,
                 }
             }
 

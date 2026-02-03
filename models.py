@@ -21,6 +21,8 @@ class BookMetadata(BaseModel):
     total_pages: int
     current_page: int
     page_count: Optional[int] = None
+    has_prev_page: Optional[bool]
+    has_next_page: Optional[bool]
 
 
 class BookListResponse(BaseModel):
