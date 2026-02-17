@@ -15,7 +15,7 @@ from list_books import list_books
 app = FastAPI()
 
 ## Add CORS for Frontend React App
-origins = ["http://localhost:3000"]
+origins = ["http://localhost:3000", "https://python-fast-api-nextjs.vercel.app/"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
