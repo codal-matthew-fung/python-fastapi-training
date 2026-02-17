@@ -17,6 +17,7 @@ def get_analytics(conn):
         COUNT(publisher) AS book_count,
         publisher
     FROM books
+    WHERE publisher NOT LIKE '%Vintage%'
     GROUP BY publisher
     ORDER BY book_count DESC
     LIMIT 5
